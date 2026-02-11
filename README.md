@@ -88,7 +88,7 @@ app/
     ├── driven/               # Hacia infraestructura (DB, APIs externas)
     └── driving/              # Hacia el dominio (casos de uso)
 ```
-
+---
 ## 📦Instalacion/Ejecucion
 
 ### Docker Compose 
@@ -109,4 +109,6 @@ http://localhost:8000
 ```bash
 http://localhost:8000/docs
 ```
+
+---
 
