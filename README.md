@@ -91,6 +91,7 @@ app/
 
 ---
 
+
 ## 📈Flujo
 <img width="796" height="597" alt="WHC SERVER ARCHITECTURE drawio" src="https://github.com/user-attachments/assets/1b2f5ea8-bb01-479f-8485-0a30fc330cca" />
 
