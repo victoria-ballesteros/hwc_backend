@@ -7,8 +7,11 @@ from app.domain.enums import UserStatus
 class UserRepositoryInterface(ABC):
     @abstractmethod
     def get_by_email(self, email: str) -> Optional[Any]:
-        """Obtiene usuario por email. Retorna el ORM (incluye password_hash) o None."""
-        raise NotImplementedError("Get_by_email method not implemented!")
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_by_id(self, user_id: int) -> Optional[Any]:
+        raise NotImplementedError
 
     @abstractmethod
     def create(
@@ -19,4 +22,4 @@ class UserRepositoryInterface(ABC):
         portrait: str | None = None,
         status: UserStatus | None = None,
     ) -> UserResponseDTO:
-        raise NotImplementedError("Create method not implemented!")
+        raise NotImplementedError

@@ -12,7 +12,8 @@ class Settings(BaseSettings):
 
     JWT_SECRET: str="dev-secret-change-in-production"
     JWT_ALGORITHM: str="HS256"
-    JWT_EXPIRE_MINUTES: int=60
+    JWT_EXPIRE_MINUTES: int=15
+    JWT_REFRESH_EXPIRE_DAYS: int=7
 
     DB_POOL_PRE_PING: bool=(
         True  # Test connections before use to avoid stale connections

@@ -13,9 +13,10 @@ class LoginInputDTO(BaseModel):
 
 
 class LoginResponseDTO(BaseModel):
-    """DTO para la respuesta del login (token + usuario)."""
+    """DTO para el login y respues del token"""
 
     access_token: str = Field(...)
+    refresh_token: str = Field(...)  
     token_type: str = Field(default="bearer")
     user: UserResponseDTO = Field(...)
 
@@ -86,3 +87,15 @@ class UserResponseDTO(BaseModel):
             status=getattr(orm_obj, "status", None),
             category_id=getattr(orm_obj, "category_id", None),
         )
+
+
+class RefreshTokenInputDTO(BaseModel):
+    refresh_token: str = Field(..., min_length=20)
+
+class RefreshTokenResponseDTO(BaseModel):
+    access_token: str = Field(...)
+    refresh_token: str = Field(...)
+    token_type: str = Field(default="bearer")
+
+class SignOutInputDTO(BaseModel):
+    refresh_token: str = Field(..., min_length=20)

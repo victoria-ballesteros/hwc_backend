@@ -14,6 +14,11 @@ from app.domain.config import settings
 from app.domain.exceptions.base_exceptions import UnauthorizedException
 
 
+from app.adapters.database.postgres.repositories.refresh_token_repository import RefreshTokenRepository
+from app.core.use_case.auth.refresh_access_token_pro import RefreshAccessTokenProHandler
+from app.core.use_case.auth.signout_pro import SignOutProHandler
+
+
 # Authorization
 
 def get_current_user_payload(
@@ -62,7 +67,21 @@ def delete_test_by_id_handler(db: Session=Depends(get_db)) -> DeleteTestByIdHand
 def get_register_user_handler(db: Session=Depends(get_db)) -> RegisterUserHandler:
     return RegisterUserHandler(get_user_repository(db))
 
+def get_login_user_handler(db: Session = Depends(get_db)) -> LoginUserHandler:
+    return LoginUserHandler(
+        get_user_repository(db),
+        get_refresh_token_repository(db),
+    )
 
-def get_login_user_handler(db: Session=Depends(get_db)) -> LoginUserHandler:
-    return LoginUserHandler(get_user_repository(db))
+def get_refresh_token_repository(db: Session) -> RefreshTokenRepository:
+    return RefreshTokenRepository(db)
 
+
+def get_refresh_access_token_pro_handler(db: Session = Depends(get_db)) -> RefreshAccessTokenProHandler:
+    return RefreshAccessTokenProHandler(
+        get_refresh_token_repository(db),
+        get_user_repository(db),
+    )
+
+def get_signout_pro_handler(db: Session = Depends(get_db)) -> SignOutProHandler:
+    return SignOutProHandler(get_refresh_token_repository(db))

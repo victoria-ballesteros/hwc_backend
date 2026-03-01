@@ -64,3 +64,6 @@ class UserRepository(UserRepositoryInterface):
 
     def get_by_verification_token(self, token: str):
         return self.db.query(User).filter(User.verification_token==token).first()
+
+    def get_by_id(self, user_id: int):
+        return self.db.query(User).filter(User.id == user_id).first()
