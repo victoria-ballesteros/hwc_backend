@@ -10,13 +10,23 @@ from app.adapters.database.storage.supabase_storage import StorageBucketSupabase
 from app.ports.driving.storage_bucket_interfaz import StorageBucketInterfaceABC
 
 
+# Authorization
+# TODO: Una vez que el middleware de autenticación haga su trabajo e inyecte al usuario al ContextVar, se obtendrá acá y se validará que su rol concuerde con el required_rol
+def get_authorized_user(required_role: str) -> None:
+    pass
+
+# Repositories
+
 def get_test_repository(db: Session) -> TestRepository:
     return TestRepository(db)
 
-def get_test_by_id_handler(db: Session = Depends(get_db)) -> GetTestByIdHandler:
+
+# Use cases
+
+def get_test_by_id_handler(db: Session=Depends(get_db)) -> GetTestByIdHandler:
     return GetTestByIdHandler(get_test_repository(db))
 
-def delete_test_by_id_handler(db: Session = Depends(get_db)) -> DeleteTestByIdHandler:
+def delete_test_by_id_handler(db: Session=Depends(get_db)) -> DeleteTestByIdHandler:
     return DeleteTestByIdHandler(get_test_repository(db))
 
 def get_storage() -> StorageBucketInterfaceABC:
