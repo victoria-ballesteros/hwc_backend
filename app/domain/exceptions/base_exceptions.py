@@ -31,7 +31,7 @@ class DuplicateRecordException(DomainException):
 
 
 class InvalidCredentialsException(DomainException):
-    def __init__(self, message: str = "Credenciales inválidas", field: str = "") -> None:
+    def __init__(self, message: str = "Invalid credentials", field: str = "") -> None:
         error_code = (
             f"{INVALID_CREDENTIALS_EXCEPTION}.{field.upper()}"
             if field
@@ -41,5 +41,5 @@ class InvalidCredentialsException(DomainException):
 
 
 class UnauthorizedException(DomainException):
-    def __init__(self, message: str = "Sesión inválida o expirada") -> None:
+    def __init__(self, message: str = "Invalid or expired session") -> None:
         super().__init__(message, UNAUTHORIZED_EXCEPTION)

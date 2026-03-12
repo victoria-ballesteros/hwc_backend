@@ -74,7 +74,7 @@ def me(
 ) -> Any:
     user_id = payload.get("sub")
     if not user_id:
-        raise UnauthorizedException("Token inválido: falta sub")
+        raise UnauthorizedException("Invalid token: missing sub")
 
     return use_case.execute(int(user_id))
 

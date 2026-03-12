@@ -16,7 +16,7 @@ class RefreshToken(Base):
 
     revoked_at = Column(DateTime(timezone=True), nullable=True)
 
-    replaced_by_token_id = Column(Integer, nullable=True)  # para rotación
+    replaced_by_token_id = Column(Integer, nullable=True)  # for token rotation
 
     user_agent = Column(String, nullable=True)
     ip_address = Column(String, nullable=True)

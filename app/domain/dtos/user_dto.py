@@ -21,7 +21,7 @@ class LoginResponseDTO(BaseModel):
 
 
 class SignOutResponseDTO(BaseModel):
-    message: str = Field(default="Sesión cerrada correctamente")
+    message: str = Field(default="Session closed successfully")
 
 
 class RegisterUserInputDTO(BaseModel):

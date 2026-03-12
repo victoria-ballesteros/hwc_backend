@@ -21,22 +21,22 @@ class RefreshAccessTokenHandler(HandlerInterface):
 
         stored = self._refresh_repo.get_by_hash(token_hash)
         if not stored:
-            raise UnauthorizedException("Refresh token inválido")
+            raise UnauthorizedException("Invalid refresh token")
 
         if stored.revoked_at is not None:
-            raise UnauthorizedException("Refresh token revocado")
+            raise UnauthorizedException("Refresh token revoked")
 
         expires_at = stored.expires_at
         if expires_at.tzinfo is None:
             expires_at = expires_at.replace(tzinfo=timezone.utc)
         if expires_at < now:
-            raise UnauthorizedException("Refresh token expirado")
+            raise UnauthorizedException("Refresh token expired")
 
-        # (opcional) confirmar que el usuario aún existe
-        # user = self._user_repo.get_by_email(...)  -> aquí solo tienes user_id, así que puedes omitirlo
+        # (optional) confirm user still exists
+        # user = self._user_repo.get_by_email(...) -> we only have user_id here, so it can be omitted
         user_id = stored.user_id
 
-        # ROTACIÓN: crear nuevo refresh token, revocar el viejo apuntando al nuevo
+        # ROTATION: create new refresh token, revoke the old one pointing to the new
         new_refresh_raw = self._new_refresh_raw()
         new_refresh_hash = hashlib.sha256(new_refresh_raw.encode("utf-8")).hexdigest()
 
@@ -53,7 +53,7 @@ class RefreshAccessTokenHandler(HandlerInterface):
             replaced_by_token_id=new_row.id,
         )
 
-        # nuevo access token
+        # new access token
         new_access = self._create_access_token(user_id=user_id)
 
         return RefreshTokenResponseDTO(

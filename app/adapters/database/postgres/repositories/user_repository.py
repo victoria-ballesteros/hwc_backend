@@ -17,17 +17,18 @@ class UserRepository(UserRepositoryInterface):
         return UserDTO.from_orm(user) if user else None
 
     def create(self, data: CreateUserDTO) -> UserResponseDTO:
-        normalized_email = data.email.strip().lower()
+        # Email is expected to be already normalized by the caller (e.g. RegisterUserHandler)
+        email = data.email
+        username = email.split("@")[0]
 
-        if self.db.query(User).filter(User.email == normalized_email).first():
+        if self.db.query(User).filter(User.email == email).first():
             raise DuplicateRecordException(
-                f"Ya existe un usuario con el email '{normalized_email}'", field="EMAIL"
+                f"A user with this email already exists: '{email}'", field="EMAIL"
             )
 
-        username = normalized_email.split("@")[0]
         if self.db.query(User).filter(User.username == username).first():
             raise DuplicateRecordException(
-                f"Ya existe un usuario con el username '{username}'", field="USERNAME"
+                f"A user with this username already exists: '{username}'", field="USERNAME"
             )
 
         user_status = data.status if data.status is not None else UserStatus.PENDING
@@ -36,7 +37,7 @@ class UserRepository(UserRepositoryInterface):
         user_orm = User(
             username=username,
             name=data.name,
-            email=normalized_email,
+            email=email,
             password_hash=data.password_hash,
             role_id=DEFAULT_ROLE_ID,
             portrait=data.portrait,

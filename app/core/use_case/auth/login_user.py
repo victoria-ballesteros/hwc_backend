@@ -25,29 +25,30 @@ class LoginUserHandler(HandlerInterface):
         self._refresh_repo = refresh_repo
 
     def execute(self, data: LoginInputDTO) -> LoginResponseDTO:
-        user = self._user_repository.get_by_email(data.email)
+        normalized_email = data.email.strip().lower()
+        user = self._user_repository.get_by_email(normalized_email)
 
         if user is None:
             raise InvalidCredentialsException(
-                message="Credenciales inválidas",
+                message="Invalid credentials",
                 field="EMAIL",
             )
 
         if not pwd_context.verify(data.password, user.password_hash):
             raise InvalidCredentialsException(
-                message="Credenciales inválidas",
+                message="Invalid credentials",
                 field="PASSWORD",
             )
 
         if data.name.strip().lower() != getattr(user, "name", "").strip().lower():
             raise InvalidCredentialsException(
-                message="Credenciales inválidas",
+                message="Invalid credentials",
                 field="NAME",
             )
 
         if not getattr(user, "is_verified", False):
             raise InvalidCredentialsException(
-                message="Email no verificado",
+                message="Email not verified",
                 field="EMAIL_NOT_VERIFIED",
             )
 
@@ -81,7 +82,7 @@ class LoginUserHandler(HandlerInterface):
         now = datetime.now(timezone.utc)
         expires = now + timedelta(days=settings.JWT_REFRESH_EXPIRE_DAYS)
 
-        raw = secrets.token_urlsafe(48)  # token opaco
+        raw = secrets.token_urlsafe(48)  # opaque token
         token_hash = self._hash_refresh_token(raw)
 
         self._refresh_repo.create(

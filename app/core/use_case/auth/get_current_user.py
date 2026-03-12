@@ -13,5 +13,5 @@ class GetCurrentUserHandler(HandlerInterface):
     def execute(self, user_id: int) -> UserResponseDTO:
         user = self._user_repository.get_by_id(user_id)
         if not user:
-            raise UnauthorizedException("Usuario no existe o sesión inválida")
+            raise UnauthorizedException("User does not exist or session is invalid")
         return user

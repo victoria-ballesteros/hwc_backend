@@ -16,7 +16,7 @@ class SignOutHandler(HandlerInterface):
 
         stored = self._refresh_repo.get_by_hash(token_hash)
         if not stored:
-            # no reveles info, solo responde OK
+            # do not reveal info, just respond OK
             return SignOutResponseDTO()
 
         if stored.revoked_at is None:

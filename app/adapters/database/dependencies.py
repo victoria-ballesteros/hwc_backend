@@ -27,12 +27,12 @@ from app.adapters.email.gmail_smtp_sender import GmailSmtpSender
 def get_current_user_payload(
     authorization: str | None = Header(None, alias="Authorization"),
 ) -> dict[str, Any]:
-    """Valida el JWT del header Authorization y devuelve el payload. Requiere sesión activa."""
+    """Validates the JWT from the Authorization header and returns the payload. Requires active session."""
     if not authorization or not authorization.startswith("Bearer "):
-        raise UnauthorizedException("Token no enviado o formato inválido")
+        raise UnauthorizedException("Token not sent or invalid format")
     token = authorization.removeprefix("Bearer ").strip()
     if not token:
-        raise UnauthorizedException("Token no enviado o formato inválido")
+        raise UnauthorizedException("Token not sent or invalid format")
     try:
         payload = jwt.decode(
             token,
@@ -41,10 +41,10 @@ def get_current_user_payload(
         )
         return payload
     except JWTError:
-        raise UnauthorizedException("Sesión inválida o expirada")
+        raise UnauthorizedException("Invalid or expired session")
 
 
-# TODO: Una vez que el middleware de autenticación haga su trabajo e inyecte al usuario al ContextVar, se obtendrá acá y se validará que su rol concuerde con el required_rol
+# TODO: Once the auth middleware injects the user into ContextVar, it will be obtained here and the role will be validated against required_rol
 def get_authorized_user(required_role: str) -> None:
     pass
 

@@ -23,6 +23,7 @@ class RegisterUserHandler(HandlerInterface):
 
     def execute(self, data: RegisterUserInputDTO) -> UserResponseDTO:
         password_hash = pwd_context.hash(data.password)
+        normalized_email = data.email.strip().lower()
 
         token = secrets.token_urlsafe(32)
         expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
@@ -30,7 +31,7 @@ class RegisterUserHandler(HandlerInterface):
         user = self._user_repository.create(
             CreateUserDTO(
                 name=data.name,
-                email=data.email,
+                email=normalized_email,
                 password_hash=password_hash,
                 portrait=data.portrait,
                 status=data.status,
