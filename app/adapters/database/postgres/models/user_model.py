@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Enum, ForeignKey, Table,Boolean,DateTime
+from sqlalchemy import Column, Integer, String, Enum, ForeignKey, Table, Boolean, DateTime
 
 from app.adapters.database.postgres.connection import Base
 from app.domain.enums import UserStatus, TeamRequestStatus
