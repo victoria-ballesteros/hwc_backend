@@ -13,8 +13,8 @@ def supabase_client() -> Client:
     
     if not url or not key:
         raise ValueError(
-            "Faltan variables de entorno para Supabase: "
-            "SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY deben estar definidas."
+            "Environment variables are missingW: "
+            "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not defined."
         )
     
     return create_client(url, key)

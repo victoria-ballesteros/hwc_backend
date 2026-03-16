@@ -1,6 +1,10 @@
 from app.domain.exceptions.error_codes import (
     BASE_EXCEPTION,
     RECORD_NOT_FOUND_EXCEPTION,
+    INVALID_FILE_TYPE,
+    FILE_SIZE_EXCEEDED,
+    FILE_NOT_FOUND,
+    BUCKET_NOT_FOUND,   
 )
 
 class DomainException(Exception):
@@ -23,29 +27,32 @@ class BucketException(Exception):
     pass
 
 class InvalidFileTypeError(BucketException):
-    def __init__(self, expected: str, received: str, field: str):
+    def __init__(self, expected: str, received: str, field: str = "file"):
+        message = f"Invalid file type for {field}. Expected: {expected}, received: {received}"
+        super().__init__(message, INVALID_FILE_TYPE)
         self.expected = expected
         self.received = received
         self.field = field
-        super().__init__(f"Tipo de archivo inválido para {field}. Esperado: {expected}, recibido: {received}")
+
 
 class FileSizeExceededError(BucketException):
-    def __init__(self, max_size_mb: float, actual_size_mb: float, field: str):
+    def __init__(self, max_size_mb: float, actual_size_mb: float, field: str = "file"):
+        message = f"File size exceeded for {field}. Maximum: {max_size_mb} MB, actual: {actual_size_mb:.2f} MB"
+        super().__init__(message, FILE_SIZE_EXCEEDED)
         self.max_size_mb = max_size_mb
         self.actual_size_mb = actual_size_mb
         self.field = field
-        super().__init__(
-            f"Tamaño excedido para {field}. Máximo: {max_size_mb} MB, actual: {actual_size_mb:.2f} MB"
-        )
+
 
 class FileNotFoundError(BucketException):
-    def __init__(self, bucket: str, path: str, message: str = "Archivo no encontrado"):
+    def __init__(self, bucket: str, path: str, message: str = "File not found"):
+        super().__init__(message, FILE_NOT_FOUND)
         self.bucket = bucket
         self.path = path
-        super().__init__(f"{message} (bucket: {bucket}, path: {path})")
+
 
 class BucketNotFoundError(BucketException):
     def __init__(self, bucket: str):
+        message = f"Bucket '{bucket}' is not configured or does not exist"
+        super().__init__(message, BUCKET_NOT_FOUND)
         self.bucket = bucket
-        super().__init__(f"Bucket '{bucket}' no configurado")
-

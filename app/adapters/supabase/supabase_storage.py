@@ -44,7 +44,7 @@ class StorageBucketSupabase(StorageBucketInterfaceABC):
                 raise BucketNotFoundError(bucket=bucket) from e 
             raise
         
-    async def get_public_url(self, bucket: str, path: str) -> str: #revisar si admite null o none
+    async def get_public_url(self, bucket: str, path: str) -> str: 
         return self.supabase_client.storage.from_(bucket).get_public_url(path)
     
     async def get_signed_url(self, bucket: str, path: str, expires_in: int = 3600) -> str:

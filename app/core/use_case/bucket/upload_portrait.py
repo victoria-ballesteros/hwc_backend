@@ -4,19 +4,16 @@ from app.domain.dtos.bucket_dto import UploadPortraitDTO
 from app.domain.exceptions.base_exceptions import (
     InvalidFileTypeError,
     FileSizeExceededError,
-    BucketNotFoundError
 )
 from io import BytesIO
 
-
 class UploadPortraitHandler(HandlerInterface):
-    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+    MAX_FILE_SIZE = 5 * 1024 * 1024  #
     
     def __init__(self, storage: StorageBucketInterfaceABC):
         self._storage = storage
     
     def execute(self, dto: UploadPortraitDTO) -> dict:
-
         if dto.content_type != "image/png":
             raise InvalidFileTypeError(
                 expected="image/png",
@@ -34,20 +31,15 @@ class UploadPortraitHandler(HandlerInterface):
             )
         
         path = f"portrait/user_{dto.user_id}.png"
-        
-        try:
-            url = self._storage.upload_file(
-                bucket="images",
-                path=path,
-                file_data=BytesIO(file_bytes),
-                content_type="image/png"
-            )
-            return {
-                "url": url,
-                "path": path,
-                "expires_in": 3600
-            }
-        except ValueError as e:
-            if "Bucket" in str(e) and "no configurado" in str(e):
-                raise BucketNotFoundError(bucket="images")
-            raise
+        url = self._storage.upload_file(
+            bucket="images",
+            path=path,
+            file_data=BytesIO(file_bytes),
+            content_type="image/png"
+        )
+        return {
+            "url": url,
+            "path": path,
+            "expires_in": 3600,
+            "message": "Profile picture uploaded successfully"  # ← Inglés
+        }

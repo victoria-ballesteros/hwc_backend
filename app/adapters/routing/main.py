@@ -35,4 +35,3 @@ async def startup_events() -> None:
 async def shutdown_event() -> None:
     logging.getLogger("uvicorn").info("Shutting down server")
 
-app.include_router(bucket_router, prefix="/bucket")
