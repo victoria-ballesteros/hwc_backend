@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     PYTHONUNBUFFERED: int = 1
     LOGGING_LEVEL: str = "DEBUG"
     POSTGRES_URI: str
+    SUPABASE_URL: str
+    SUPABASE_SERVICE_ROLE_KEY: str
 
     ENVIRONMENT: Environment
     CLEAR_EXISTING_DATA_FOR_DEVELOPMENT: bool
