@@ -11,6 +11,7 @@ from app.adapters.routing.fastapi.routers.default_router import default_router
 from app.adapters.routing.fastapi.routers.test_router import test_router
 from app.adapters.routing.fastapi.routers.bucket_router import bucket_router
 
+from app.adapters.routing.fastapi.routers.auth_router import router as auth_router
 
 
 def init_app(app: FastAPI) -> FastAPI:
@@ -23,6 +24,7 @@ def setup_routes(app: FastAPI) -> None:
     app.include_router(default_router)
     app.include_router(test_router)
     app.include_router(bucket_router)
+    app.include_router(auth_router)
 
 def setup_middleware(app: FastAPI) -> None:
     origins=["*"] # TODO: Update with specific origins in production

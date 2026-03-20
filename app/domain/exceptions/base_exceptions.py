@@ -5,7 +5,11 @@ from app.domain.exceptions.error_codes import (
     FILE_SIZE_EXCEEDED,
     FILE_NOT_FOUND,
     BUCKET_NOT_FOUND,   
+    DUPLICATE_RECORD_EXCEPTION,
+    INVALID_CREDENTIALS_EXCEPTION,
+    UNAUTHORIZED_EXCEPTION,
 )
+
 
 class DomainException(Exception):
     def __init__(self, message: str, error_code: str=BASE_EXCEPTION) -> None:
@@ -56,3 +60,23 @@ class BucketNotFoundError(BucketException):
         message = f"Bucket '{bucket}' is not configured or does not exist"
         super().__init__(message, BUCKET_NOT_FOUND)
         self.bucket = bucket
+
+class DuplicateRecordException(DomainException):
+    def __init__(self, message: str, field: str = "") -> None:
+        error_code = f"{DUPLICATE_RECORD_EXCEPTION}.{field.upper()}" if field else DUPLICATE_RECORD_EXCEPTION
+        super().__init__(message, error_code)
+
+
+class InvalidCredentialsException(DomainException):
+    def __init__(self, message: str = "Invalid credentials", field: str = "") -> None:
+        error_code = (
+            f"{INVALID_CREDENTIALS_EXCEPTION}.{field.upper()}"
+            if field
+            else INVALID_CREDENTIALS_EXCEPTION
+        )
+        super().__init__(message, error_code)
+
+
+class UnauthorizedException(DomainException):
+    def __init__(self, message: str = "Invalid or expired session") -> None:
+        super().__init__(message, UNAUTHORIZED_EXCEPTION)
