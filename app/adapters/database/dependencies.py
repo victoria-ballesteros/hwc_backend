@@ -189,7 +189,7 @@ def RequireRoles(allowed_codes: list[str], granular_requirements: list[str]) -> 
 
         role_repo = get_role_repository(db)
 
-        if not allowed_codes:
+        if not allowed_codes and not granular_requirements:
             return
 
         user = user_context.get()
