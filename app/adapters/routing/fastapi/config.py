@@ -1,7 +1,8 @@
 import logging
 import sys
 
-from fastapi import FastAPI 
+from app.adapters.routing.fastapi.middlewares.context_middleware import UserContextMiddleware
+from fastapi import FastAPI  # type: ignore
 from fastapi.middleware.cors import CORSMiddleware # type: ignore
 
 from app.domain.config import settings
@@ -28,6 +29,8 @@ def setup_routes(app: FastAPI) -> None:
 
 def setup_middleware(app: FastAPI) -> None:
     origins=["*"] # TODO: Update with specific origins in production
+    
+    app.add_middleware(UserContextMiddleware)
 
     app.add_middleware(
         CORSMiddleware,

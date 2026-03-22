@@ -13,7 +13,7 @@ class UserRepository(UserRepositoryInterface):
 
     def get_by_email(self, email: str) -> UserDTO | None:
         normalized_email = email.strip().lower()
-        user = self.db.query(User).filter(User.email == normalized_email).first()
+        user = self.db.query(User).filter_by(email=normalized_email).first()
         return UserDTO.from_orm(user) if user else None
 
     def create(self, data: CreateUserDTO) -> UserResponseDTO:
@@ -21,25 +21,24 @@ class UserRepository(UserRepositoryInterface):
         email = data.email
         username = email.split("@")[0]
 
-        if self.db.query(User).filter(User.email == email).first():
+        if self.db.query(User).filter_by(email=email).first():
             raise DuplicateRecordException(
                 f"A user with this email already exists: '{email}'", field="EMAIL"
             )
 
-        if self.db.query(User).filter(User.username == username).first():
+        if self.db.query(User).filter_by(username=username).first():
             raise DuplicateRecordException(
                 f"A user with this username already exists: '{username}'", field="USERNAME"
             )
 
         user_status = data.status if data.status is not None else UserStatus.PENDING
-        DEFAULT_ROLE_ID = 2
 
         user_orm = User(
             username=username,
             name=data.name,
             email=email,
             password_hash=data.password_hash,
-            role_id=DEFAULT_ROLE_ID,
+            role_id=data.role_id,
             portrait=data.portrait,
             category_id=None,
             status=user_status,
@@ -54,15 +53,15 @@ class UserRepository(UserRepositoryInterface):
         return UserResponseDTO.from_orm(user_orm)
 
     def get_by_verification_token(self, token: str) -> UserDTO | None:
-        user = self.db.query(User).filter(User.verification_token == token).first()
+        user = self.db.query(User).filter_by(verification_token=token).first()
         return UserDTO.from_orm(user) if user else None
 
     def get_by_id(self, user_id: int) -> UserResponseDTO | None:
-        user = self.db.query(User).filter(User.id == user_id).first()
+        user = self.db.query(User).filter_by(id=user_id).first()
         return UserResponseDTO.from_orm(user) if user else None
 
     def confirm_email_verification(self, user_id: int) -> None:
-        user = self.db.query(User).filter(User.id == user_id).first()
+        user = self.db.query(User).filter_by(id=user_id).first()
         if not user:
             return
 

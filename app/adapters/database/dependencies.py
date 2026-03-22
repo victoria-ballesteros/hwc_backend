@@ -1,6 +1,7 @@
 from typing import Any
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt  # type: ignore
+from app.adapters.database.postgres.repositories.role_repository import RoleRepository
 from fastapi import Depends, Header  # type: ignore
 
 from app.core.use_case.test.delete_test import DeleteTestByIdHandler
@@ -25,13 +26,17 @@ from app.domain.config import settings
 from app.domain.exceptions.base_exceptions import UnauthorizedException
 
 
-from app.adapters.database.postgres.repositories.refresh_token_repository import RefreshTokenRepository
+from app.adapters.database.postgres.repositories.refresh_token_repository import (
+    RefreshTokenRepository,
+)
 from app.core.use_case.auth.refresh_access_token import RefreshAccessTokenHandler
 from app.core.use_case.auth.signout import SignOutHandler
 from app.adapters.email.gmail_smtp_sender import GmailSmtpSender
 
+from app.adapters.routing.utils.context import user_context
 
 # Authorization
+
 
 def get_current_user_payload(
     authorization: str | None = Header(None, alias="Authorization"),
@@ -53,11 +58,20 @@ def get_current_user_payload(
         raise UnauthorizedException("Invalid or expired session")
 
 
-# TODO: Once the auth middleware injects the user into ContextVar, it will be obtained here and the role will be validated against required_rol
-def get_authorized_user(required_role: str) -> None:
-    pass
+def set_authorized_user(
+    user_payload=Depends(get_current_user_payload), db: Session = Depends(get_db)
+) -> None:
+    user_id = user_payload.get("sub")
+
+    if not user_id:
+        raise UnauthorizedException("Invalid token")
+
+    repo = get_user_repository(db)
+    user_context.set(repo.get_by_id(user_id))
+
 
 # Repositories
+
 
 def get_test_repository(db: Session) -> TestRepository:
     return TestRepository(db)
@@ -66,65 +80,80 @@ def get_test_repository(db: Session) -> TestRepository:
 def get_user_repository(db: Session) -> UserRepository:
     return UserRepository(db)
 
+def get_role_repository(db: Session) -> RoleRepository:
+    return RoleRepository(db)
 
 # Use cases
 
-def get_test_by_id_handler(db: Session=Depends(get_db)) -> GetTestByIdHandler:
+
+def get_test_by_id_handler(db: Session = Depends(get_db)) -> GetTestByIdHandler:
     return GetTestByIdHandler(get_test_repository(db))
 
-def delete_test_by_id_handler(db: Session=Depends(get_db)) -> DeleteTestByIdHandler:
+
+def delete_test_by_id_handler(db: Session = Depends(get_db)) -> DeleteTestByIdHandler:
     return DeleteTestByIdHandler(get_test_repository(db))
+
 
 def get_supabase_client() -> StorageBucketInterfaceABC:
     return StorageBucketSupabase(supabase_client())
 
+
 def get_upload_portrait_handler(
-    storage: StorageBucketInterfaceABC = Depends(get_supabase_client)
+    storage: StorageBucketInterfaceABC = Depends(get_supabase_client),
 ) -> UploadPortraitHandler:
     return UploadPortraitHandler(storage)
 
 
 def get_delete_portrait_handler(
-    storage: StorageBucketInterfaceABC = Depends(get_supabase_client)
+    storage: StorageBucketInterfaceABC = Depends(get_supabase_client),
 ) -> DeletePortraitHandler:
     return DeletePortraitHandler(storage)
 
 
 def get_upload_sponsor_logo_handler(
-    storage: StorageBucketInterfaceABC = Depends(get_supabase_client)
+    storage: StorageBucketInterfaceABC = Depends(get_supabase_client),
 ) -> UploadSponsorLogoHandler:
     return UploadSponsorLogoHandler(storage)
 
 
 def get_upload_exercise_handler(
-    storage: StorageBucketInterfaceABC = Depends(get_supabase_client)
+    storage: StorageBucketInterfaceABC = Depends(get_supabase_client),
 ) -> UploadExerciseHandler:
     return UploadExerciseHandler(storage)
+
+
 def get_login_user_handler(db: Session = Depends(get_db)) -> LoginUserHandler:
     return LoginUserHandler(
         get_user_repository(db),
         get_refresh_token_repository(db),
     )
 
+
 def get_refresh_token_repository(db: Session) -> RefreshTokenRepository:
     return RefreshTokenRepository(db)
 
 
-def get_refresh_access_token_handler(db: Session = Depends(get_db)) -> RefreshAccessTokenHandler:
+def get_refresh_access_token_handler(
+    db: Session = Depends(get_db),
+) -> RefreshAccessTokenHandler:
     return RefreshAccessTokenHandler(
         get_refresh_token_repository(db),
         get_user_repository(db),
     )
 
+
 def get_signout_handler(db: Session = Depends(get_db)) -> SignOutHandler:
     return SignOutHandler(get_refresh_token_repository(db))
+
 
 def get_email_sender() -> GmailSmtpSender:
     return GmailSmtpSender()
 
+
 def get_register_user_handler(db: Session = Depends(get_db)) -> RegisterUserHandler:
     return RegisterUserHandler(
         get_user_repository(db),
+        get_role_repository(db),
         get_email_sender(),
     )
 
