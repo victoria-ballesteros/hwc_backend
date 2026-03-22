@@ -200,6 +200,9 @@ def RequireRoles(allowed_codes: list[str], granular_requirements: list[str]) -> 
 
         if not role:
             raise UnauthorizedException("User role not found or invalid")
+        
+        if role.is_super_user:
+            return
 
         if role.internal_code not in allowed_codes:
             raise ForbiddenException()
