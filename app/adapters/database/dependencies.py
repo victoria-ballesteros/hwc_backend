@@ -11,6 +11,7 @@ from app.core.use_case.auth.get_current_user import GetCurrentUserHandler
 from app.core.use_case.auth.verify_email import VerifyEmailHandler
 from app.adapters.database.postgres.repositories.test_repository import TestRepository
 from app.adapters.database.postgres.repositories.user_repository import UserRepository
+from app.adapters.database.postgres.repositories.team_repository import TeamRepository
 from app.adapters.database.postgres.connection import get_db
 from app.adapters.supabase.supabase_connection import supabase_client
 from app.adapters.supabase.supabase_storage import StorageBucketSupabase
@@ -25,13 +26,20 @@ from app.domain.config import settings
 from app.domain.exceptions.base_exceptions import UnauthorizedException
 
 
-from app.adapters.database.postgres.repositories.refresh_token_repository import RefreshTokenRepository
+from app.adapters.database.postgres.repositories.refresh_token_repository import (
+    RefreshTokenRepository,
+)
 from app.core.use_case.auth.refresh_access_token import RefreshAccessTokenHandler
 from app.core.use_case.auth.signout import SignOutHandler
 from app.adapters.email.gmail_smtp_sender import GmailSmtpSender
+from app.core.use_case.team.create_team import CreateTeamHandler
+from app.core.use_case.team.send_team_invitations import SendTeamInvitationsHandler
+from app.core.use_case.team.delete_team_invitation import DeleteTeamInvitationHandler
+from app.core.use_case.team.delete_team import DeleteTeamHandler
 
 
 # Authorization
+
 
 def get_current_user_payload(
     authorization: str | None = Header(None, alias="Authorization"),
@@ -57,7 +65,9 @@ def get_current_user_payload(
 def get_authorized_user(required_role: str) -> None:
     pass
 
+
 # Repositories
+
 
 def get_test_repository(db: Session) -> TestRepository:
     return TestRepository(db)
@@ -67,60 +77,76 @@ def get_user_repository(db: Session) -> UserRepository:
     return UserRepository(db)
 
 
+def get_team_repository(db: Session) -> TeamRepository:
+    return TeamRepository(db)
+
+
 # Use cases
 
-def get_test_by_id_handler(db: Session=Depends(get_db)) -> GetTestByIdHandler:
+
+def get_test_by_id_handler(db: Session = Depends(get_db)) -> GetTestByIdHandler:
     return GetTestByIdHandler(get_test_repository(db))
 
-def delete_test_by_id_handler(db: Session=Depends(get_db)) -> DeleteTestByIdHandler:
+
+def delete_test_by_id_handler(db: Session = Depends(get_db)) -> DeleteTestByIdHandler:
     return DeleteTestByIdHandler(get_test_repository(db))
+
 
 def get_supabase_client() -> StorageBucketInterfaceABC:
     return StorageBucketSupabase(supabase_client())
 
+
 def get_upload_portrait_handler(
-    storage: StorageBucketInterfaceABC = Depends(get_supabase_client)
+    storage: StorageBucketInterfaceABC = Depends(get_supabase_client),
 ) -> UploadPortraitHandler:
     return UploadPortraitHandler(storage)
 
 
 def get_delete_portrait_handler(
-    storage: StorageBucketInterfaceABC = Depends(get_supabase_client)
+    storage: StorageBucketInterfaceABC = Depends(get_supabase_client),
 ) -> DeletePortraitHandler:
     return DeletePortraitHandler(storage)
 
 
 def get_upload_sponsor_logo_handler(
-    storage: StorageBucketInterfaceABC = Depends(get_supabase_client)
+    storage: StorageBucketInterfaceABC = Depends(get_supabase_client),
 ) -> UploadSponsorLogoHandler:
     return UploadSponsorLogoHandler(storage)
 
 
 def get_upload_exercise_handler(
-    storage: StorageBucketInterfaceABC = Depends(get_supabase_client)
+    storage: StorageBucketInterfaceABC = Depends(get_supabase_client),
 ) -> UploadExerciseHandler:
     return UploadExerciseHandler(storage)
+
+
 def get_login_user_handler(db: Session = Depends(get_db)) -> LoginUserHandler:
     return LoginUserHandler(
         get_user_repository(db),
         get_refresh_token_repository(db),
     )
 
+
 def get_refresh_token_repository(db: Session) -> RefreshTokenRepository:
     return RefreshTokenRepository(db)
 
 
-def get_refresh_access_token_handler(db: Session = Depends(get_db)) -> RefreshAccessTokenHandler:
+def get_refresh_access_token_handler(
+    db: Session = Depends(get_db),
+) -> RefreshAccessTokenHandler:
     return RefreshAccessTokenHandler(
         get_refresh_token_repository(db),
         get_user_repository(db),
     )
 
+
 def get_signout_handler(db: Session = Depends(get_db)) -> SignOutHandler:
     return SignOutHandler(get_refresh_token_repository(db))
 
+
 def get_email_sender() -> GmailSmtpSender:
     return GmailSmtpSender()
+
 
 def get_register_user_handler(db: Session = Depends(get_db)) -> RegisterUserHandler:
     return RegisterUserHandler(
@@ -135,3 +161,23 @@ def get_current_user_handler(db: Session = Depends(get_db)) -> GetCurrentUserHan
 
 def get_verify_email_handler(db: Session = Depends(get_db)) -> VerifyEmailHandler:
     return VerifyEmailHandler(get_user_repository(db))
+
+
+def get_create_team_handler(db: Session = Depends(get_db)) -> CreateTeamHandler:
+    return CreateTeamHandler(get_team_repository(db))
+
+
+def get_send_team_invitations_handler(
+    db: Session = Depends(get_db),
+) -> SendTeamInvitationsHandler:
+    return SendTeamInvitationsHandler(get_team_repository(db))
+
+
+def get_delete_team_invitation_handler(
+    db: Session = Depends(get_db),
+) -> DeleteTeamInvitationHandler:
+    return DeleteTeamInvitationHandler(get_team_repository(db))
+
+
+def get_delete_team_handler(db: Session = Depends(get_db)) -> DeleteTeamHandler:
+    return DeleteTeamHandler(get_team_repository(db))
