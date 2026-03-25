@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, UploadFile, Form, Path
+from fastapi import APIRouter, Depends, File, UploadFile, Form, Path # type: ignore
 from io import BytesIO
 from app.domain.dtos.bucket_dto import (
     UploadPortraitDTO,

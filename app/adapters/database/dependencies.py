@@ -1,6 +1,11 @@
-from typing import Any
+from typing import Any, Callable
 from sqlalchemy.orm import Session
 from jose import JWTError, jwt  # type: ignore
+from app.adapters.database.postgres.repositories.role_repository import RoleRepository
+from app.adapters.routing.utils.granular_permissions import GranularFunctions
+from app.domain.dtos.user_dto import UserDTO
+from app.domain.enums import UserStatus
+from app.ports.driven.database.postgres.role_repository import RoleRepositoryInterface
 from fastapi import Depends, Header  # type: ignore
 
 from app.core.use_case.test.delete_test import DeleteTestByIdHandler
@@ -23,7 +28,10 @@ from app.core.use_case.bucket.upload_sponsor_logo import UploadSponsorLogoHandle
 from app.core.use_case.bucket.upload_exercise import UploadExerciseHandler
 
 from app.domain.config import settings
-from app.domain.exceptions.base_exceptions import UnauthorizedException
+from app.domain.exceptions.base_exceptions import (
+    ForbiddenException,
+    UnauthorizedException,
+)
 
 
 from app.adapters.database.postgres.repositories.refresh_token_repository import (
@@ -37,33 +45,7 @@ from app.core.use_case.team.send_team_invitations import SendTeamInvitationsHand
 from app.core.use_case.team.delete_team_invitation import DeleteTeamInvitationHandler
 from app.core.use_case.team.delete_team import DeleteTeamHandler
 
-
-# Authorization
-
-
-def get_current_user_payload(
-    authorization: str | None = Header(None, alias="Authorization"),
-) -> dict[str, Any]:
-    """Validates the JWT from the Authorization header and returns the payload. Requires active session."""
-    if not authorization or not authorization.startswith("Bearer "):
-        raise UnauthorizedException("Token not sent or invalid format")
-    token = authorization.removeprefix("Bearer ").strip()
-    if not token:
-        raise UnauthorizedException("Token not sent or invalid format")
-    try:
-        payload = jwt.decode(
-            token,
-            settings.JWT_SECRET,
-            algorithms=[settings.JWT_ALGORITHM],
-        )
-        return payload
-    except JWTError:
-        raise UnauthorizedException("Invalid or expired session")
-
-
-# TODO: Once the auth middleware injects the user into ContextVar, it will be obtained here and the role will be validated against required_rol
-def get_authorized_user(required_role: str) -> None:
-    pass
+from app.adapters.routing.utils.context import user_context
 
 
 # Repositories
@@ -77,8 +59,8 @@ def get_user_repository(db: Session) -> UserRepository:
     return UserRepository(db)
 
 
-def get_team_repository(db: Session) -> TeamRepository:
-    return TeamRepository(db)
+def get_role_repository(db: Session) -> RoleRepository:
+    return RoleRepository(db)
 
 
 # Use cases
@@ -151,6 +133,7 @@ def get_email_sender() -> GmailSmtpSender:
 def get_register_user_handler(db: Session = Depends(get_db)) -> RegisterUserHandler:
     return RegisterUserHandler(
         get_user_repository(db),
+        get_role_repository(db),
         get_email_sender(),
     )
 
@@ -161,6 +144,94 @@ def get_current_user_handler(db: Session = Depends(get_db)) -> GetCurrentUserHan
 
 def get_verify_email_handler(db: Session = Depends(get_db)) -> VerifyEmailHandler:
     return VerifyEmailHandler(get_user_repository(db))
+
+
+# Authorization
+
+async def get_current_user_payload(
+    authorization: str | None = Header(None, alias="Authorization"),
+) -> dict[str, Any]:
+    """Validates the JWT from the Authorization header and returns the payload. Requires active session."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise UnauthorizedException("Token not sent or invalid format")
+    token = authorization.removeprefix("Bearer ").strip()
+    if not token:
+        raise UnauthorizedException("Token not sent or invalid format")
+    try:
+        payload = jwt.decode(
+            token,
+            settings.JWT_SECRET,
+            algorithms=[settings.JWT_ALGORITHM],
+        )
+        return payload
+    except JWTError:
+        raise UnauthorizedException("Invalid or expired session")
+
+
+async def set_authorized_user(
+    user_payload: dict = Depends(get_current_user_payload),
+    db: Session = Depends(get_db),
+) -> None:
+    user_id = user_payload.get("sub")
+    if not user_id:
+        raise UnauthorizedException("Invalid token")
+
+    user_response = get_user_repository(db).get_by_id(int(user_id))
+    if not user_response:
+        raise UnauthorizedException("User not found")
+
+    # `user_context` is typed as `UserDTO`, but `get_by_id` returns `UserResponseDTO`.
+    user_context.set(UserDTO(**user_response.model_dump()))
+
+
+def RequireRoles(
+    allowed_codes: list[str],
+    granular_requirements: list[str],
+) -> Callable[..., Any]:
+    """
+    Dependency factory for role-based and granular authorization.
+    """
+
+    async def _authorize(
+        db: Session = Depends(get_db),
+        _=Depends(set_authorized_user),
+    ) -> None:
+        # set_authorized_user guarantees authentication and populates `user_context`.
+        user = user_context.get()
+        if not user or not user.role_id:
+            raise UnauthorizedException("Authentication required")
+
+        # Authentication-only dependency.
+        if not allowed_codes and not granular_requirements:
+            return
+
+        role_repo = get_role_repository(db)
+        role = role_repo.get_by_id(user.role_id)
+
+        if not role:
+            raise UnauthorizedException("User role not found or invalid")
+
+        # Super admin bypasses any role/granular restrictions.
+        if role.is_super_user:
+            return
+
+        if allowed_codes and role.internal_code not in allowed_codes:
+            raise ForbiddenException()
+
+        if granular_requirements:
+            granular_functions = GranularFunctions()
+            for requirement in granular_requirements:
+                granular_callable = granular_functions.get_granular_function(
+                    requirement
+                )
+                if granular_callable is None or not granular_callable(user):
+                    raise ForbiddenException()
+
+    return _authorize
+
+
+def get_team_repository(db: Session) -> TeamRepository:
+    return TeamRepository(db)
 
 
 def get_create_team_handler(db: Session = Depends(get_db)) -> CreateTeamHandler:

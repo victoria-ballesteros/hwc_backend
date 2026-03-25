@@ -8,7 +8,6 @@ from app.domain.enums import UserStatus
 
 
 class LoginInputDTO(BaseModel):
-    name: str = Field(..., min_length=1)
     email: str = Field(..., min_length=1)
     password: str = Field(..., min_length=1)
 
@@ -29,7 +28,6 @@ class RegisterUserInputDTO(BaseModel):
     email: str = Field(..., min_length=1)
     password: str = Field(..., min_length=1)
     portrait: str | None = Field(default=None)
-    status: UserStatus | None = Field(default=None)
 
 
 class CreateUserDTO(BaseModel):
@@ -41,6 +39,7 @@ class CreateUserDTO(BaseModel):
     verification_token: str | None = None
     verification_expires_at: datetime | None = None
     is_verified: bool = False
+    role_id: int
 
 
 class UserDTO(BaseModel):

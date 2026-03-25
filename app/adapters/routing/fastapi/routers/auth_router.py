@@ -1,14 +1,13 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query # type: ignore
 
 from app.adapters.database.dependencies import (
+    RequireRoles,
     get_register_user_handler,
     get_login_user_handler,
     get_refresh_access_token_handler,
     get_signout_handler,
-    get_current_user_payload,
-    get_current_user_handler,
     get_verify_email_handler,
 )
 from app.adapters.routing.utils.decorators import format_response
@@ -23,8 +22,10 @@ from app.domain.dtos.user_dto import (
     SignOutInputDTO,
     SignOutResponseDTO,
 )
-from app.domain.exceptions.base_exceptions import UnauthorizedException
 from app.ports.driving.handler_interface import HandlerInterface
+
+from app.adapters.routing.utils.context import user_context
+
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -68,15 +69,8 @@ def signout(
 
 @router.get("/me", response_model=ResultSchema[UserResponseDTO])
 @format_response
-def me(
-    payload: dict = Depends(get_current_user_payload),
-    use_case: HandlerInterface = Depends(get_current_user_handler),
-) -> Any:
-    user_id = payload.get("sub")
-    if not user_id:
-        raise UnauthorizedException("Invalid token: missing sub")
-
-    return use_case.execute(int(user_id))
+def me(_=Depends(RequireRoles([], []))) -> Any:
+    return user_context.get()
 
 
 @router.get("/verify", response_model=ResultSchema[dict])

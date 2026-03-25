@@ -40,12 +40,6 @@ class LoginUserHandler(HandlerInterface):
                 field="PASSWORD",
             )
 
-        if data.name.strip().lower() != getattr(user, "name", "").strip().lower():
-            raise InvalidCredentialsException(
-                message="Invalid credentials",
-                field="NAME",
-            )
-
         if not getattr(user, "is_verified", False):
             raise InvalidCredentialsException(
                 message="Email not verified",
