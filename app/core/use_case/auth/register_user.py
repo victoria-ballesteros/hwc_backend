@@ -33,7 +33,11 @@ class RegisterUserHandler(HandlerInterface):
         token = secrets.token_urlsafe(32)
         expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
 
+        # Backward compatibility: older seed data still uses `competitor`
+        # while newer business migrations use `common_user`.
         default_role = self._role_repository.get_by_internal_code("common_user")
+        if not default_role:
+            default_role = self._role_repository.get_by_internal_code("competitor")
 
         if not default_role:
             raise RecordNotFoundException("role")

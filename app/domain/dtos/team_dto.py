@@ -3,6 +3,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field  # type: ignore
 
 from app.domain.enums import TeamRequestStatus
+from app.domain.dtos.user_dto import UserResponseDTO
 
 
 class TeamResponseDTO(BaseModel):
@@ -41,6 +42,15 @@ class TeamRequestDTO(BaseModel):
     status: TeamRequestStatus = Field(...)
 
 
+class TeamInvitationSummaryDTO(BaseModel):
+    team_request_id: int = Field(...)
+    team_id: int = Field(...)
+    team_name: str = Field(...)
+    sender_user_id: int = Field(...)
+    sender_username: str = Field(...)
+    status: TeamRequestStatus = Field(...)
+
+
 class CreateTeamInputDTO(BaseModel):
     category_id: int = Field(..., gt=0, description="Category identifier")
 
@@ -70,6 +80,42 @@ class DeleteTeamInvitationResponseDTO(BaseModel):
     message: str = Field(default="Invitation deleted successfully")
     team_request_id: int = Field(...)
     status: TeamRequestStatus = Field(...)
+
+
+class ListMyTeamInvitationsResponseDTO(BaseModel):
+    message: str = Field(default="Pending invitations retrieved successfully")
+    invitations: list[TeamInvitationSummaryDTO] = Field(default_factory=list)
+
+
+class AcceptTeamInvitationResponseDTO(BaseModel):
+    message: str = Field(default="Invitation accepted successfully")
+    team_request_id: int = Field(...)
+    team: TeamResponseDTO = Field(...)
+    status: TeamRequestStatus = Field(...)
+    deleted_other_pending_invitations: int = Field(default=0)
+
+
+class TeamListItemDTO(BaseModel):
+    team: TeamResponseDTO = Field(...)
+    leader: UserResponseDTO | None = Field(default=None)
+    members_count: int = Field(default=0)
+
+
+class ListTeamsResponseDTO(BaseModel):
+    message: str = Field(default="Teams retrieved successfully")
+    teams: list[TeamListItemDTO] = Field(default_factory=list)
+
+
+class TeamDetailDTO(BaseModel):
+    team: TeamResponseDTO = Field(...)
+    leader: UserResponseDTO | None = Field(default=None)
+    members: list[UserResponseDTO] = Field(default_factory=list)
+    members_count: int = Field(default=0)
+
+
+class GetTeamDetailResponseDTO(BaseModel):
+    message: str = Field(default="Team retrieved successfully")
+    team: TeamDetailDTO = Field(...)
 
 
 class DeleteTeamResponseDTO(BaseModel):

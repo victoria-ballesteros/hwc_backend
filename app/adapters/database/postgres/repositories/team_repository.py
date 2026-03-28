@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import delete, func, select, update
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from app.adapters.database.postgres.models.category_model import Category
 from app.adapters.database.postgres.models.edition_model import Edition
@@ -11,8 +11,14 @@ from app.adapters.database.postgres.models.user_model import (
     team_request_association,
     user_team_association,
 )
-from app.domain.dtos.team_dto import TeamRequestDTO, TeamResponseDTO
-from app.domain.dtos.user_dto import UserDTO
+from app.domain.dtos.team_dto import (
+    TeamDetailDTO,
+    TeamInvitationSummaryDTO,
+    TeamListItemDTO,
+    TeamRequestDTO,
+    TeamResponseDTO,
+)
+from app.domain.dtos.user_dto import UserDTO, UserResponseDTO
 from app.domain.enums import TeamRequestStatus
 from app.domain.exceptions.base_exceptions import RecordNotFoundException
 from app.ports.driven.database.postgres.team_repository_abc import (
@@ -75,6 +81,70 @@ class TeamRepository(TeamRepositoryInterface):
     def get_team_by_id(self, team_id: int) -> TeamResponseDTO | None:
         team = self.db.query(Team).filter(Team.id == team_id).first()
         return TeamResponseDTO.from_orm(team) if team else None
+
+    def list_teams(self) -> list[TeamListItemDTO]:
+        leader_user = aliased(User)
+
+        rows = self.db.execute(
+            select(
+                Team,
+                leader_user,
+                func.count(user_team_association.c.user_id).label("members_count"),
+            )
+            .select_from(Team)
+            .outerjoin(
+                leader_user,
+                leader_user.id == Team.assigned_evaluator_id,
+            )
+            .outerjoin(
+                user_team_association,
+                user_team_association.c.team_id == Team.id,
+            )
+            .group_by(Team.id, leader_user.id)
+            .order_by(Team.id.desc())
+        ).all()
+
+        return [
+            TeamListItemDTO(
+                team=TeamResponseDTO.from_orm(row[0]),
+                leader=UserResponseDTO.from_orm(row[1]) if row[1] else None,
+                members_count=int(row[2] or 0),
+            )
+            for row in rows
+        ]
+
+    def get_team_detail_by_id(self, team_id: int) -> TeamDetailDTO | None:
+        team_orm = self.db.query(Team).filter(Team.id == team_id).first()
+        if team_orm is None:
+            return None
+
+        leader_orm = None
+        if team_orm.assigned_evaluator_id is not None:
+            leader_orm = (
+                self.db.query(User)
+                .filter(User.id == team_orm.assigned_evaluator_id)
+                .first()
+            )
+
+        member_orms = (
+            self.db.query(User)
+            .join(
+                user_team_association,
+                user_team_association.c.user_id == User.id,
+            )
+            .filter(user_team_association.c.team_id == team_id)
+            .order_by(User.id.asc())
+            .all()
+        )
+
+        members = [UserResponseDTO.from_orm(member) for member in member_orms]
+
+        return TeamDetailDTO(
+            team=TeamResponseDTO.from_orm(team_orm),
+            leader=UserResponseDTO.from_orm(leader_orm) if leader_orm else None,
+            members=members,
+            members_count=len(members),
+        )
 
     def create_team(
         self,
@@ -201,6 +271,45 @@ class TeamRepository(TeamRepositoryInterface):
             status=row.status,
         )
 
+    def get_pending_team_requests_by_receiver_id(
+        self, receiver_user_id: int
+    ) -> list[TeamInvitationSummaryDTO]:
+        sender_user = aliased(User)
+
+        rows = self.db.execute(
+            select(
+                team_request_association.c.id.label("team_request_id"),
+                team_request_association.c.team_id,
+                Team.name.label("team_name"),
+                team_request_association.c.sender_user_id,
+                sender_user.username.label("sender_username"),
+                team_request_association.c.status,
+            )
+            .select_from(team_request_association)
+            .join(Team, Team.id == team_request_association.c.team_id)
+            .join(
+                sender_user,
+                sender_user.id == team_request_association.c.sender_user_id,
+            )
+            .where(
+                team_request_association.c.receiver_user_id == receiver_user_id,
+                team_request_association.c.status == TeamRequestStatus.PENDING,
+            )
+            .order_by(team_request_association.c.id.desc())
+        ).all()
+
+        return [
+            TeamInvitationSummaryDTO(
+                team_request_id=row.team_request_id,
+                team_id=row.team_id,
+                team_name=row.team_name,
+                sender_user_id=row.sender_user_id,
+                sender_username=row.sender_username,
+                status=row.status,
+            )
+            for row in rows
+        ]
+
     def update_team_request_status(
         self,
         team_request_id: int,
@@ -234,6 +343,66 @@ class TeamRepository(TeamRepositoryInterface):
             receiver_user_id=row.receiver_user_id,
             status=row.status,
         )
+
+    def accept_team_request_and_assign_user(
+        self,
+        team_request_id: int,
+    ) -> tuple[TeamRequestDTO, int]:
+        existing_request = self.get_team_request_by_id(team_request_id)
+        if existing_request is None:
+            raise RecordNotFoundException("TEAM_REQUEST")
+
+        try:
+            accepted_row = self.db.execute(
+                update(team_request_association)
+                .where(team_request_association.c.id == team_request_id)
+                .values(status=TeamRequestStatus.ACCEPTED)
+                .returning(
+                    team_request_association.c.id,
+                    team_request_association.c.team_id,
+                    team_request_association.c.sender_user_id,
+                    team_request_association.c.receiver_user_id,
+                    team_request_association.c.status,
+                )
+            ).first()
+
+            if accepted_row is None:
+                raise RecordNotFoundException("TEAM_REQUEST")
+
+            self.db.execute(
+                user_team_association.insert().values(
+                    user_id=accepted_row.receiver_user_id,
+                    team_id=accepted_row.team_id,
+                )
+            )
+
+            deleted_other_pending_invitations = (
+                self.db.execute(
+                    update(team_request_association)
+                    .where(
+                        team_request_association.c.receiver_user_id
+                        == accepted_row.receiver_user_id,
+                        team_request_association.c.id != accepted_row.id,
+                        team_request_association.c.status == TeamRequestStatus.PENDING,
+                    )
+                    .values(status=TeamRequestStatus.DELETED)
+                ).rowcount
+                or 0
+            )
+
+            self.db.commit()
+        except Exception:
+            self.db.rollback()
+            raise
+
+        accepted_request = TeamRequestDTO(
+            id=accepted_row.id,
+            team_id=accepted_row.team_id,
+            sender_user_id=accepted_row.sender_user_id,
+            receiver_user_id=accepted_row.receiver_user_id,
+            status=accepted_row.status,
+        )
+        return accepted_request, deleted_other_pending_invitations
 
     def delete_team_with_associations(self, team_id: int) -> tuple[int, int]:
         try:

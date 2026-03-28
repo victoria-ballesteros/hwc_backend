@@ -4,8 +4,6 @@ from jose import JWTError, jwt  # type: ignore
 from app.adapters.database.postgres.repositories.role_repository import RoleRepository
 from app.adapters.routing.utils.granular_permissions import GranularFunctions
 from app.domain.dtos.user_dto import UserDTO
-from app.domain.enums import UserStatus
-from app.ports.driven.database.postgres.role_repository import RoleRepositoryInterface
 from fastapi import Depends, Header  # type: ignore
 
 from app.core.use_case.test.delete_test import DeleteTestByIdHandler
@@ -44,6 +42,12 @@ from app.core.use_case.team.create_team import CreateTeamHandler
 from app.core.use_case.team.send_team_invitations import SendTeamInvitationsHandler
 from app.core.use_case.team.delete_team_invitation import DeleteTeamInvitationHandler
 from app.core.use_case.team.delete_team import DeleteTeamHandler
+from app.core.use_case.team.list_my_team_invitations import (
+    ListMyTeamInvitationsHandler,
+)
+from app.core.use_case.team.accept_team_invitation import AcceptTeamInvitationHandler
+from app.core.use_case.team.list_teams import ListTeamsHandler
+from app.core.use_case.team.get_team_detail import GetTeamDetailHandler
 
 from app.adapters.routing.utils.context import user_context
 
@@ -148,6 +152,7 @@ def get_verify_email_handler(db: Session = Depends(get_db)) -> VerifyEmailHandle
 
 # Authorization
 
+
 async def get_current_user_payload(
     authorization: str | None = Header(None, alias="Authorization"),
 ) -> dict[str, Any]:
@@ -238,16 +243,36 @@ def get_create_team_handler(db: Session = Depends(get_db)) -> CreateTeamHandler:
     return CreateTeamHandler(get_team_repository(db))
 
 
+def get_list_teams_handler(db: Session = Depends(get_db)) -> ListTeamsHandler:
+    return ListTeamsHandler(get_team_repository(db))
+
+
+def get_team_detail_handler(db: Session = Depends(get_db)) -> GetTeamDetailHandler:
+    return GetTeamDetailHandler(get_team_repository(db))
+
+
 def get_send_team_invitations_handler(
     db: Session = Depends(get_db),
 ) -> SendTeamInvitationsHandler:
     return SendTeamInvitationsHandler(get_team_repository(db))
 
 
+def get_list_my_team_invitations_handler(
+    db: Session = Depends(get_db),
+) -> ListMyTeamInvitationsHandler:
+    return ListMyTeamInvitationsHandler(get_team_repository(db))
+
+
 def get_delete_team_invitation_handler(
     db: Session = Depends(get_db),
 ) -> DeleteTeamInvitationHandler:
     return DeleteTeamInvitationHandler(get_team_repository(db))
+
+
+def get_accept_team_invitation_handler(
+    db: Session = Depends(get_db),
+) -> AcceptTeamInvitationHandler:
+    return AcceptTeamInvitationHandler(get_team_repository(db))
 
 
 def get_delete_team_handler(db: Session = Depends(get_db)) -> DeleteTeamHandler:
