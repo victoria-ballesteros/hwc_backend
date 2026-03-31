@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Table  
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Table  
 from sqlalchemy.dialects.postgresql import ENUM as PgEnum  
+from sqlalchemy.sql import func
 from app.adapters.database.postgres.connection import Base
 
 
@@ -13,6 +14,9 @@ class Team(Base):
     score = Column(Integer)
     standing_position = Column(Integer)
     cloud_repo_link = Column(String)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
     
     edition_id = Column(
         Integer, ForeignKey("edition.id", ondelete="CASCADE"), nullable=False
