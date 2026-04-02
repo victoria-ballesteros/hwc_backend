@@ -3,9 +3,9 @@ from typing import Any
 from fastapi import APIRouter, Depends
 
 from app.adapters.database.dependencies import (
+    RequireRoles,
     get_accept_team_invitation_handler,
     get_create_team_handler,
-    get_current_user_payload,
     get_delete_team_handler,
     get_delete_team_invitation_handler,
     get_list_my_team_invitations_handler,
@@ -29,31 +29,32 @@ from app.domain.dtos.team_dto import (
 )
 from app.domain.exceptions.base_exceptions import UnauthorizedException
 from app.ports.driving.handler_interface import HandlerInterface
+from app.adapters.routing.utils.context import user_context
 
 router = APIRouter(prefix="/teams", tags=["teams"])
 
 
-def _get_current_user_id(payload: dict) -> int:
-    user_id = payload.get("sub")
-    if not user_id:
-        raise UnauthorizedException("Invalid token: missing sub")
-    return int(user_id)
+def _get_current_user_id() -> int:
+    current_user = user_context.get()
+    if not current_user or current_user.id is None:
+        raise UnauthorizedException("Authentication required")
+    return current_user.id
 
 
 @router.post("", status_code=201, response_model=ResultSchema[CreateTeamResponseDTO])
 @format_response
 def create_team(
     data: CreateTeamInputDTO,
-    payload: dict = Depends(get_current_user_payload),
+    _=Depends(RequireRoles([], [])),
     use_case: HandlerInterface = Depends(get_create_team_handler),
 ) -> Any:
-    return use_case.execute(_get_current_user_id(payload), data)
+    return use_case.execute(_get_current_user_id(), data)
 
 
 @router.get("", response_model=ResultSchema[ListTeamsResponseDTO])
 @format_response
 def list_teams(
-    _payload: dict = Depends(get_current_user_payload),
+    _=Depends(RequireRoles([], [])),
     use_case: HandlerInterface = Depends(get_list_teams_handler),
 ) -> Any:
     return use_case.execute()
@@ -63,7 +64,7 @@ def list_teams(
 @format_response
 def get_team_detail(
     team_id: int,
-    _payload: dict = Depends(get_current_user_payload),
+    _=Depends(RequireRoles([], [])),
     use_case: HandlerInterface = Depends(get_team_detail_handler),
 ) -> Any:
     return use_case.execute(team_id)
@@ -76,10 +77,10 @@ def get_team_detail(
 @format_response
 def send_team_invitations(
     data: SendTeamInvitationsInputDTO,
-    payload: dict = Depends(get_current_user_payload),
+    _=Depends(RequireRoles([], [])),
     use_case: HandlerInterface = Depends(get_send_team_invitations_handler),
 ) -> Any:
-    return use_case.execute(_get_current_user_id(payload), data)
+    return use_case.execute(_get_current_user_id(), data)
 
 
 @router.get(
@@ -88,10 +89,10 @@ def send_team_invitations(
 )
 @format_response
 def list_my_team_invitations(
-    payload: dict = Depends(get_current_user_payload),
+    _=Depends(RequireRoles([], [])),
     use_case: HandlerInterface = Depends(get_list_my_team_invitations_handler),
 ) -> Any:
-    return use_case.execute(_get_current_user_id(payload))
+    return use_case.execute(_get_current_user_id())
 
 
 @router.post(
@@ -101,10 +102,10 @@ def list_my_team_invitations(
 @format_response
 def accept_team_invitation(
     team_request_id: int,
-    payload: dict = Depends(get_current_user_payload),
+    _=Depends(RequireRoles([], [])),
     use_case: HandlerInterface = Depends(get_accept_team_invitation_handler),
 ) -> Any:
-    return use_case.execute(_get_current_user_id(payload), team_request_id)
+    return use_case.execute(_get_current_user_id(), team_request_id)
 
 
 @router.delete(
@@ -114,17 +115,17 @@ def accept_team_invitation(
 @format_response
 def delete_team_invitation(
     team_request_id: int,
-    payload: dict = Depends(get_current_user_payload),
+    _=Depends(RequireRoles([], [])),
     use_case: HandlerInterface = Depends(get_delete_team_invitation_handler),
 ) -> Any:
-    return use_case.execute(_get_current_user_id(payload), team_request_id)
+    return use_case.execute(_get_current_user_id(), team_request_id)
 
 
 @router.delete("/{team_id}", response_model=ResultSchema[DeleteTeamResponseDTO])
 @format_response
 def delete_team(
     team_id: int,
-    payload: dict = Depends(get_current_user_payload),
+    _=Depends(RequireRoles([], [])),
     use_case: HandlerInterface = Depends(get_delete_team_handler),
 ) -> Any:
-    return use_case.execute(_get_current_user_id(payload), team_id)
+    return use_case.execute(_get_current_user_id(), team_id)
