@@ -20,22 +20,22 @@ def test_get_active_users_from_migration(repo: TeamQueryInterface) -> None:
     active_users = repo.get_active_users()
     emails = [u.email for u in active_users]
 
-    assert "daniel.bautista@unet.edu.ve" in emails
-    assert "douglas.moreno@unet.edu.ve" in emails
+    assert "daniel.bautista.test@unet.edu.ve" in emails
+    assert "douglas.moreno.test@unet.edu.ve" in emails
     assert "maria.ballesteros@unet.edu.ve" not in emails
 
 def test_get_user_team_not_found_real_user(repo, db_session) -> None:
     user = db_session.query(User).filter_by(email="maria.ballesteros@unet.edu.ve").first()
 
-    assert user is not None, "El usuario de la migración no existe en la BD"
+    assert user is not None, "The migration did not load the user Maria"
 
     with pytest.raises(TeamNotFoundException):
         repo.get_user_team(str(user.id))
 
 
 def test_get_user_team_info_is_correct(repo, db_session):
-    user = db_session.query(User).filter_by(email="daniel.bautista@unet.edu.ve").first()
-    assert user is not None, "La migración no cargó al usuario Daniel"
+    user = db_session.query(User).filter_by(email="daniel.bautista.test@unet.edu.ve").first()
+    assert user is not None, "The migration did not load the user Daniel"
 
     response = repo.get_user_team(str(user.id))
 
@@ -45,7 +45,7 @@ def test_get_user_team_info_is_correct(repo, db_session):
 
     assert len(response.accepted_members) > 0
     member = response.accepted_members[0]
-    assert member.email == "daniel.bautista@unet.edu.ve"
+    assert member.email == "daniel.bautista.test@unet.edu.ve"
     assert member.username == "dbautista"
     assert member.status == TeamRequestStatus.ACCEPTED.name
 

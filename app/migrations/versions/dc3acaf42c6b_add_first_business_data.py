@@ -140,7 +140,7 @@ def upgrade() -> None:
     cat_id = get_id("category", "internal_code", "cat_general")
     ed_id = get_id("edition", "name", "First Edition 2026")
 
-    default_hash = "pbkdf2:sha256:600000$default_hash_value" 
+    default_hash = "$argon2id$v=19$m=65536,t=3,p=4$+t9b693b2xsjpNR6j7GWMg$3IB15WbxlyCIpV7kT1IXTP/4DIqj2De0m6MQa3zze7E" 
 
     users_to_insert = [
         {
@@ -156,7 +156,7 @@ def upgrade() -> None:
         {
             "username": "dbautista",
             "name": "Daniel Bautista",
-            "email": "daniel.bautista@unet.edu.ve",
+            "email": "daniel.bautista.test@unet.edu.ve",
             "password_hash": default_hash,
             "status": "ACTIVE",
             "role_id": role_admin,
@@ -166,7 +166,7 @@ def upgrade() -> None:
         {
             "username": "dmoreno",
             "name": "Douglas Moreno",
-            "email": "douglas.moreno@unet.edu.ve",
+            "email": "douglas.moreno.test@unet.edu.ve",
             "password_hash": default_hash,
             "status": "ACTIVE",
             "role_id": role_common,
