@@ -87,32 +87,34 @@ class UnauthorizedException(DomainException):
 class ForbiddenException(DomainException):
     def __init__(self, message: str = "Access denied") -> None:
         super().__init__(message, FORBIDDEN_EXCEPTION)
+
 class TeamException(DomainException):
-    def __init__(self, message: str, error_code: str = TEAM_EXCEPTION):
+    def __init__(self, message: str, error_code: str = TEAM_EXCEPTION) -> None:
         super().__init__(message, error_code)
+
 class TeamNotFoundException(TeamException):
-    def __init__(self, user_id: str):
+    def __init__(self, user_id: str) -> None:
         message = f"Team not found for user '{user_id}'"
         super().__init__(message, TEAM_NOT_FOUND)
         self.user_id = user_id
+
 class NoCurrentEditionException(TeamException):
-    def __init__(self):
+    def __init__(self) -> None:
         message = "No current edition found"
         super().__init__(message, TEAM_NO_CURRENT_EDITION)
+
 class NoTeamAssociationException(TeamException):
-    def __init__(self, user_id: str):
+    def __init__(self, user_id: str) -> None:
         message = f"No team association found for user '{user_id}'"
         super().__init__(message, TEAM_NO_ASSOCIATION)
         self.user_id = user_id
+
 class UserException(DomainException):
-    def __init__(self, message: str, error_code: str = USER_EXCEPTION):
+    def __init__(self, message: str, error_code: str = USER_EXCEPTION) -> None:
         super().__init__(message, error_code)
+
 class UserNotFoundException(UserException):
-    def __init__(self, user_id: str):
+    def __init__(self, user_id: str) -> None:
         message = f"User not found: '{user_id}'"
         super().__init__(message, USER_NOT_FOUND)
         self.user_id = user_id
-class UnauthorizedException(UserException):
-    def __init__(self):
-        message = "User is not authorized to perform this action"
-        super().__init__(message, USER_UNAUTHORIZED)

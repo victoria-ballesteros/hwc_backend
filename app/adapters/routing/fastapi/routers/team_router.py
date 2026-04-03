@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException # type: ignore
 from app.core.use_case.team.get_user_team import GetUserTeamHandler
 from app.core.use_case.team.get_active_users import GetActiveUsersHandler
 from app.adapters.database.dependencies import (

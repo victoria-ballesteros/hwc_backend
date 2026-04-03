@@ -15,14 +15,13 @@ from app.adapters.database.postgres.models.user_model import (
     team_request_association
 )
 from app.adapters.database.postgres.models.edition_model import Edition
-from app.adapters.database.postgres.models.user_model import User
 from app.adapters.database.postgres.models.role_model import Role
 from app.domain.enums import TeamRequestStatus, UserStatus
 from typing import List
 
 
 class TeamRepository(TeamQueryInterface):
-    def __init__(self, db: Session):
+    def __init__(self, db: Session) -> None:
         self.db = db
     
     def get_user_team(self, user_id: str) -> TeamResponseDTO:
@@ -34,55 +33,57 @@ class TeamRepository(TeamQueryInterface):
             raise NoCurrentEditionException()
         
         team = self.db.query(Team)\
-            .join(
-                user_team_association,
-                (Team.id == user_team_association.c.team_id) &
-                (user_team_association.c.user_id == int(user_id))
+            .join(user_team_association)\
+            .filter(
+                user_team_association.c.user_id == int(user_id),
+                Team.edition_id == current_edition.id
             )\
-            .filter(Team.edition_id == current_edition.id)\
             .first()
         
         if not team:
             raise TeamNotFoundException(user_id=user_id)
         
-        stmt = select(team_request_association)\
-            .where(team_request_association.c.team_id == team.id)
-        requests = self.db.execute(stmt).mappings().all()
-        
-        deleted_members = []
-        pending_members = []
-        accepted_members = []
-        
-        for req in requests:
-            user = self.db.query(User).filter(User.id == req.sender_user_id).first()
-            if not user:
-                continue
-            
-            member_dto = TeamMemberDTO(
-                user_id=str(user.id),
-                username=user.username,
-                email=user.email,
-                name=user.name,
-                status=req.status.value  
+        stmt = (
+            select(
+                User.id, 
+                User.username, 
+                User.email, 
+                User.name, 
+                team_request_association.c.status
             )
-            
-            if req.status == TeamRequestStatus.DELETED:
-                deleted_members.append(member_dto)
-            elif req.status == TeamRequestStatus.PENDING:
-                pending_members.append(member_dto)
-            elif req.status == TeamRequestStatus.ACCEPTED:
-                accepted_members.append(member_dto)
+            .join(User, User.id == team_request_association.c.sender_user_id)
+            .where(team_request_association.c.team_id == team.id)
+        )
+        
+        members_data = self.db.execute(stmt).all()
+        
+        categorized = {
+            TeamRequestStatus.DENIED: [],
+            TeamRequestStatus.PENDING: [],
+            TeamRequestStatus.ACCEPTED: []
+        }
+        
+        for row in members_data:
+            member_dto = TeamMemberDTO(
+                user_id=str(row.id),
+                username=row.username,
+                email=row.email,
+                name=row.name,
+                status=TeamRequestStatus(row.status).name
+            )
+            if row.status in categorized:
+                categorized[row.status].append(member_dto)
         
         return TeamResponseDTO(
             team_id=str(team.id),
             team_name=team.name,
             edition_id=str(current_edition.id),
             edition_name=current_edition.name,
-            created_at=team.created_at if hasattr(team, 'created_at') else None,
-            updated_at=team.updated_at if hasattr(team, 'updated_at') else None,
-            deleted_members=deleted_members,
-            pending_members=pending_members,
-            accepted_members=accepted_members
+            created_at=getattr(team, 'created_at', None),
+            updated_at=getattr(team, 'updated_at', None),
+            deleted_members=categorized[TeamRequestStatus.DENIED],
+            pending_members=categorized[TeamRequestStatus.PENDING],
+            accepted_members=categorized[TeamRequestStatus.ACCEPTED]
         )
     
     def get_active_users(self) -> List[UserListDTO]:
@@ -90,7 +91,7 @@ class TeamRepository(TeamQueryInterface):
             .join(Role, User.role_id == Role.id)\
             .filter(
                 User.status == UserStatus.ACTIVE,
-                not Role.is_super_user 
+                Role.is_super_user == False 
             ).all()
         
         return [
