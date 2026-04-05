@@ -33,3 +33,4 @@ async def startup_events() -> None:
 @app.on_event("shutdown")
 async def shutdown_event() -> None:
     logging.getLogger("uvicorn").info("Shutting down server")
+
