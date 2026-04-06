@@ -9,6 +9,13 @@ from app.domain.exceptions.error_codes import (
     INVALID_CREDENTIALS_EXCEPTION,
     UNAUTHORIZED_EXCEPTION,
     FORBIDDEN_EXCEPTION,
+    TEAM_EXCEPTION,
+    TEAM_NOT_FOUND,
+    TEAM_NO_CURRENT_EDITION,
+    TEAM_NO_ASSOCIATION,
+    USER_EXCEPTION,
+    USER_NOT_FOUND,
+    USER_UNAUTHORIZED,
 )
 
 
@@ -57,7 +64,7 @@ class FileNotFoundError(BucketException):
         super().__init__(message, FILE_NOT_FOUND)
         self.bucket = bucket
         self.path = path
-
+        
 class BucketNotFoundError(BucketException):
     def __init__(self, bucket: str):
         message = f"Bucket '{bucket}' is not configured or does not exist"
@@ -93,3 +100,40 @@ class ForbiddenException(DomainException):
         self, message: str = "You are not allowed to perform this action"
     ) -> None:
         super().__init__(message, FORBIDDEN_EXCEPTION)
+
+
+class TeamException(DomainException):
+    def __init__(self, message: str, error_code: str = TEAM_EXCEPTION) -> None:
+        super().__init__(message, error_code)
+
+
+class TeamNotFoundException(TeamException):
+    def __init__(self, user_id: str) -> None:
+        message = f"Team not found for user '{user_id}'"
+        super().__init__(message, TEAM_NOT_FOUND)
+        self.user_id = user_id
+
+
+class NoCurrentEditionException(TeamException):
+    def __init__(self) -> None:
+        message = "No current edition found"
+        super().__init__(message, TEAM_NO_CURRENT_EDITION)
+
+
+class NoTeamAssociationException(TeamException):
+    def __init__(self, user_id: str) -> None:
+        message = f"No team association found for user '{user_id}'"
+        super().__init__(message, TEAM_NO_ASSOCIATION)
+        self.user_id = user_id
+
+
+class UserException(DomainException):
+    def __init__(self, message: str, error_code: str = USER_EXCEPTION) -> None:
+        super().__init__(message, error_code)
+
+
+class UserNotFoundException(UserException):
+    def __init__(self, user_id: str) -> None:
+        message = f"User not found: '{user_id}'"
+        super().__init__(message, USER_NOT_FOUND)
+        self.user_id = user_id

@@ -13,7 +13,9 @@ from app.adapters.routing.fastapi.routers.test_router import test_router
 from app.adapters.routing.fastapi.routers.bucket_router import bucket_router
 
 from app.adapters.routing.fastapi.routers.auth_router import router as auth_router
+
 from app.adapters.routing.fastapi.routers.team_router import router as team_router
+
 
 
 def init_app(app: FastAPI) -> FastAPI:
@@ -29,6 +31,7 @@ def setup_routes(app: FastAPI) -> None:
     app.include_router(bucket_router)
     app.include_router(auth_router)
     app.include_router(team_router)
+
 
 
 def setup_middleware(app: FastAPI) -> None:

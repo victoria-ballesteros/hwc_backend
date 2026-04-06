@@ -5,6 +5,10 @@ from pydantic import BaseModel, Field  # type: ignore
 from app.domain.enums import TeamRequestStatus
 from app.domain.dtos.user_dto import UserResponseDTO
 
+from datetime import datetime
+from typing import Optional
+from pydantic import BaseModel, Field  # type: ignore
+
 
 class TeamResponseDTO(BaseModel):
     id: int = Field(...)
@@ -123,3 +127,28 @@ class DeleteTeamResponseDTO(BaseModel):
     team_id: int = Field(...)
     deleted_team_requests: int = Field(...)
     deleted_user_team_associations: int = Field(...)
+
+
+class UserListDTO(BaseModel):
+    username: str
+    email: str
+    name: str
+
+class TeamMemberDTO(BaseModel):
+    user_id: str
+    username: str
+    email: str
+    name: str
+    status: str
+
+
+class GetUserTeamResponseDTO(BaseModel):
+    team_id: str
+    team_name: str
+    edition_id: str
+    edition_name: str
+    created_at: datetime | None = Field(default=None)
+    updated_at: datetime | None = Field(default=None)
+    deleted_members: list[TeamMemberDTO] = Field(default_factory=list)
+    pending_members: list[TeamMemberDTO] = Field(default_factory=list)
+    accepted_members: list[TeamMemberDTO] = Field(default_factory=list)

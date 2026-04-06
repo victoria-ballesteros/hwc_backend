@@ -12,6 +12,7 @@ from app.adapters.database.postgres.models.user_model import (
     user_team_association,
 )
 from app.domain.dtos.team_dto import (
+    GetUserTeamResponseDTO,
     TeamDetailDTO,
     TeamInvitationSummaryDTO,
     TeamListItemDTO,
@@ -24,6 +25,16 @@ from app.domain.exceptions.base_exceptions import RecordNotFoundException
 from app.ports.driven.database.postgres.team_repository_abc import (
     TeamRepositoryInterface,
 )
+
+from sqlalchemy import desc, select
+from app.adapters.database.postgres.models.role_model import Role
+from app.domain.enums import TeamRequestStatus, UserStatus
+from app.domain.dtos.team_dto import TeamMemberDTO, TeamResponseDTO, UserListDTO
+from app.domain.exceptions.base_exceptions import (
+    NoCurrentEditionException,
+    TeamNotFoundException,
+)
+from typing import List
 
 
 class TeamRepository(TeamRepositoryInterface):
@@ -111,6 +122,117 @@ class TeamRepository(TeamRepositoryInterface):
                 members_count=int(row[2] or 0),
             )
             for row in rows
+        ]
+
+    def get_user_team(self, user_id: str) -> GetUserTeamResponseDTO:
+        current_edition = self.db.query(Edition)\
+            .order_by(desc(Edition.start_date))\
+            .first()
+        
+        if not current_edition:
+            raise NoCurrentEditionException()
+        
+        team = self.db.query(Team)\
+            .join(user_team_association)\
+            .filter(
+                user_team_association.c.user_id == int(user_id),
+                Team.edition_id == current_edition.id
+            )\
+            .first()
+        
+        if not team:
+            raise TeamNotFoundException(user_id=user_id)
+        
+        categorized = {
+            TeamRequestStatus.DELETED: [],
+            TeamRequestStatus.PENDING: [],
+            TeamRequestStatus.ACCEPTED: []
+        }
+
+        accepted_members_stmt = (
+            select(
+                User.id,
+                User.username,
+                User.email,
+                User.name,
+            )
+            .join(user_team_association, user_team_association.c.user_id == User.id)
+            .where(user_team_association.c.team_id == team.id)
+            .order_by(User.id.asc())
+        )
+
+        accepted_members_data = self.db.execute(accepted_members_stmt).all()
+
+        for row in accepted_members_data:
+            categorized[TeamRequestStatus.ACCEPTED].append(
+                TeamMemberDTO(
+                    user_id=str(row.id),
+                    username=row.username,
+                    email=row.email,
+                    name=row.name,
+                    status=TeamRequestStatus.ACCEPTED.name,
+                )
+            )
+
+        invited_members_stmt = (
+            select(
+                User.id,
+                User.username,
+                User.email,
+                User.name,
+                team_request_association.c.status,
+            )
+            .select_from(team_request_association)
+            .join(User, User.id == team_request_association.c.receiver_user_id)
+            .where(
+                team_request_association.c.team_id == team.id,
+                team_request_association.c.status.in_(
+                    [TeamRequestStatus.PENDING, TeamRequestStatus.DELETED]
+                ),
+            )
+            .order_by(team_request_association.c.id.asc())
+        )
+
+        invited_members_data = self.db.execute(invited_members_stmt).all()
+
+        for row in invited_members_data:
+            categorized[row.status].append(
+                TeamMemberDTO(
+                    user_id=str(row.id),
+                    username=row.username,
+                    email=row.email,
+                    name=row.name,
+                    status=TeamRequestStatus(row.status).name,
+                )
+            )
+        
+        return GetUserTeamResponseDTO(
+            team_id=str(team.id),
+            team_name=team.name,
+            edition_id=str(current_edition.id),
+            edition_name=current_edition.name,
+            created_at=getattr(team, 'created_at', None),
+            updated_at=getattr(team, 'updated_at', None),
+            deleted_members=categorized[TeamRequestStatus.DELETED],
+            pending_members=categorized[TeamRequestStatus.PENDING],
+            accepted_members=categorized[TeamRequestStatus.ACCEPTED]
+        )
+    
+    def get_active_users(self) -> List[UserListDTO]:
+        users = self.db.query(User)\
+            .join(Role, User.role_id == Role.id)\
+            .filter(
+                User.status == UserStatus.ACTIVE,
+                Role.is_super_user == False 
+            ).all()
+        
+        return [
+            UserListDTO(
+                username=user.username,
+                email=user.email,
+                name=user.name
+            )
+            for user in users
         ]
 
     def get_team_detail_by_id(self, team_id: int) -> TeamDetailDTO | None:

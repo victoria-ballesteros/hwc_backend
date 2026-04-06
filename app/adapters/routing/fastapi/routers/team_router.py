@@ -1,6 +1,8 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException #type: ignore
+from app.core.use_case.team.get_user_team import GetUserTeamHandler
+from app.core.use_case.team.get_active_users import GetActiveUsersHandler
 
 from app.adapters.database.dependencies import (
     RequireRoles,
@@ -13,6 +15,10 @@ from app.adapters.database.dependencies import (
     get_send_team_invitations_handler,
     get_team_detail_handler,
 )
+from app.adapters.database.dependencies import (
+    get_user_team_handler,
+    get_active_users_handler,
+)
 from app.adapters.routing.utils.decorators import format_response
 from app.adapters.routing.utils.response import ResultSchema
 from app.domain.dtos.team_dto import (
@@ -21,6 +27,7 @@ from app.domain.dtos.team_dto import (
     CreateTeamResponseDTO,
     DeleteTeamInvitationResponseDTO,
     DeleteTeamResponseDTO,
+    GetUserTeamResponseDTO,
     GetTeamDetailResponseDTO,
     ListMyTeamInvitationsResponseDTO,
     ListTeamsResponseDTO,
@@ -58,6 +65,28 @@ def list_teams(
     use_case: HandlerInterface = Depends(get_list_teams_handler),
 ) -> Any:
     return use_case.execute()
+
+
+@router.get("/me", response_model=ResultSchema[GetUserTeamResponseDTO])
+@format_response
+async def get_user_team(
+    handler: GetUserTeamHandler = Depends(get_user_team_handler),
+    _: str = Depends(RequireRoles([], [])),  
+) -> Any:
+    current_user = user_context.get()
+    if not current_user or not hasattr(current_user, 'id'):
+        raise HTTPException(401, "unauthenticated user")
+    
+    return handler.execute(str(current_user.id))
+
+
+@router.get("/users")
+@format_response
+async def get_active_users(
+    handler: GetActiveUsersHandler = Depends(get_active_users_handler),
+    _: str = Depends(RequireRoles([], [])),  
+) -> Any:
+    return handler.execute()
 
 
 @router.get("/{team_id}", response_model=ResultSchema[GetTeamDetailResponseDTO])
