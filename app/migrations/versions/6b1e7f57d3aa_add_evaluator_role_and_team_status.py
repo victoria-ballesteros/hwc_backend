@@ -41,6 +41,23 @@ def upgrade() -> None:
 
             conn.execute(sa.text("UPDATE team SET status = 0 WHERE status IS NULL"))
 
+        if "project_evaluator_id" not in existing_columns:
+            op.add_column(
+                "team",
+                sa.Column(
+                    "project_evaluator_id",
+                    sa.Integer(),
+                    sa.ForeignKey("user.id", ondelete="SET NULL"),
+                    nullable=True,
+                ),
+            )
+
+        if "feedback" not in existing_columns:
+            op.add_column(
+                "team",
+                sa.Column("feedback", sa.String(), nullable=True),
+            )
+
     if "role" in existing_tables:
         evaluator_role_exists = conn.execute(
             sa.text(
@@ -88,6 +105,12 @@ def downgrade() -> None:
 
     if "team" in existing_tables:
         existing_columns = {column["name"] for column in inspector.get_columns("team")}
+
+        if "feedback" in existing_columns:
+            op.drop_column("team", "feedback")
+
+        if "project_evaluator_id" in existing_columns:
+            op.drop_column("team", "project_evaluator_id")
 
         if "status" in existing_columns:
             op.drop_column("team", "status")
